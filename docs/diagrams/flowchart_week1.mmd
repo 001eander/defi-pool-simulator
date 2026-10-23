@@ -1,0 +1,42 @@
+---
+title: DeFi 流动性池仿真系统运行流程（第1次课 · 问题定义）
+---
+flowchart TD
+    subgraph TRADE["交易流（到达间隔 EXPO 5 min）"]
+        T1([用户交易到达]) --> T2[判定交易类型<br/>小额60% / 中额30% / 大额10%]
+        T2 --> T3[判定买卖方向<br/>A→B 或 B→A]
+        T3 --> T4[抽取交易规模<br/>UNIF 按类型区间]
+        T4 --> T5[按恒定乘积 x·y=k<br/>计算成交价与滑点]
+        T5 --> T6{滑点 ≤ 容忍度?<br/>1% / 3% / 5%}
+        T6 -- 是 --> T7[执行交易<br/>更新储备A/B<br/>收0.3%手续费回流池中]
+        T7 --> T8[Record: 成交量/滑点/手续费]
+        T6 -- 否,放弃 --> T9[Record: 失败交易]
+        T8 --> T10([离开系统])
+        T9 --> T10
+    end
+
+    subgraph LP["LP 流动性流（添加 EXPO 2h / 移除 EXPO 3h）"]
+        L1([LP 事件到达]) --> L2{添加还是移除?}
+        L2 -- 添加 --> L3[抽取规模 1万–10万 A<br/>按当前比例折算 B]
+        L2 -- 移除 --> L4[抽取规模 1万–5万 A<br/>按份额等比移除 A、B]
+        L3 --> L5[更新储备与 LP 份额]
+        L4 --> L5
+        L5 --> L6([事件结束])
+    end
+
+    subgraph MKT["外部价格流（每小时触发）"]
+        M1([每小时价格事件]) --> M2["抽取变化率 N(0%, 2%)"]
+        M2 --> M3[更新外部参照价格]
+        M3 --> M4[计算并记录 LP 无常损失]
+        M4 --> M5([事件结束])
+    end
+
+    STATE[("共享状态变量<br/>储备A · 储备B · 池内价格<br/>累计手续费 · 累计交易量 · 无常损失")]
+    T7 -.更新.-> STATE
+    L5 -.更新.-> STATE
+    M4 -.更新.-> STATE
+    STATE -.定价依据.-> T5
+
+    style STATE fill:#fff3cd,stroke:#d4a017
+    style T6 fill:#ffe0e0,stroke:#c0392b
+    style L2 fill:#e0ecff,stroke:#2f6fd0

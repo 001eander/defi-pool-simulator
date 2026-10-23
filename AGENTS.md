@@ -15,3 +15,21 @@ Issues 托管在 GitHub Issues，使用 `gh` CLI 读写。See `docs/agents/issue
 ### Domain docs
 
 Single-context 布局：根目录 `GLOSSARY.md` + `docs/adr/`。See `docs/agents/domain.md`.
+
+## 项目结构
+
+```text
+src/defi_pool_simulator/   仿真包源码（src 布局）
+tests/                     功能测试，随新功能开发建立
+scripts/                   课程文档处理脚本
+docs/agents/               Agent 工作流说明
+docs/diagrams/             流程图 Mermaid 源码与渲染图
+docs/*.docx                课程模板、案例材料与提交稿
+pyproject.toml             依赖、ruff 与 mypy 配置
+.pre-commit-config.yaml    pre-commit 钩子（ruff、mypy）
+uv.lock                    依赖锁定
+```
+
+## 测试
+
+测试只在开发新功能时作为功能测试编写，不写无意义的简单测试（如导入成功、版本号非空）。

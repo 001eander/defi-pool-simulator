@@ -20,8 +20,13 @@ requires = ["uv_build>=0.11.29,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
+docs = [
+    "pypdf>=6.1.1",
+    "python-docx>=1.2.0",
+]
 dev = [
     "mypy>=2.4.0",
+    "pandas-stubs>=3.0.5.260914",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "ruff>=0.17.2",

@@ -13,6 +13,48 @@ uv run pytest    # 运行测试
 
 源码位于 `src/defi_pool_simulator/`。
 
+## 仿真模型
+
+第2次课的概念模型已实现为 salabim 离散事件模型，时间单位为小时。同刻事件按「外部价格 > LP 操作 > 交易」排序；交易与 LP 操作服务时长为 0，不形成等待队列。
+
+```bash
+uv run python -m defi_pool_simulator --replications 10 --output-dir results
+```
+
+可选参数：`--seed`、`--fee-rate`、`--price-sigma`、`--duration-hours`。
+
+| 输出文件 | 内容 |
+|---|---|
+| `results/replications.csv` | 每次重复仿真的标量指标 |
+| `results/snapshots.csv` | 每小时储备、价格、手续费与无常损失快照 |
+| `results/summary.csv` | 各指标的均值、标准差与 95% 置信区间半宽 |
+
+指标口径：
+
+- 滑点为成交均价相对池内即时价的偏离比例，包含手续费。
+- 累计手续费按成交前池内价格折算为 Token B。
+- 无常损失以初始外部价格为基准，按 `1 - 2√k / (1 + k)` 计算，`k` 为外部价格比；LP 净收益为累计手续费减无常损失。
+
+| 模块 | 职责 |
+|---|---|
+| `parameters.py` | 案例参数、交易类型与参数校验 |
+| `amm.py` | 恒定乘积定价、滑点、手续费、LP 份额与无常损失 |
+| `metrics.py` | 交易结果累计、小时快照与单次仿真结果 |
+| `model.py` | salabim 到达流、事件处理与同刻优先级 |
+| `runner.py` | 多次重复、汇总统计与 CSV 输出 |
+| `__main__.py` | 命令行入口 |
+
+## 课程表单脚本
+
+课程表单的脚本文档依赖 `docs` 组，PDF 导出调用 LibreOffice：
+
+```bash
+uv sync --group docs
+uv run --group docs python scripts/fill_week2_form.py
+
+brew install --cask libreoffice   # 仅首次
+```
+
 ## 一、案例背景
 
 某去中心化交易所（DEX）运营一个自动化做市商（AMM）流动性池，用户可以在池中进行代币兑换交易。仿真时段为 7 天（168 小时），以小时为时间单位。

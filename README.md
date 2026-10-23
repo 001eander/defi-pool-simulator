@@ -2,6 +2,17 @@
 
 去中心化金融（DeFi）流动性池仿真（区块链 · DeFi）—— 决策仿真课程实践案例
 
+## 开发环境
+
+依赖由 uv 管理，Python 版本固定在 `.python-version`。仿真引擎为 salabim，结果分析使用 pandas 与 matplotlib。
+
+```bash
+uv sync          # 安装依赖（含 dev 组）
+uv run pytest    # 运行测试
+```
+
+源码位于 `src/defi_pool_simulator/`。
+
 ## 一、案例背景
 
 某去中心化交易所（DEX）运营一个自动化做市商（AMM）流动性池，用户可以在池中进行代币兑换交易。仿真时段为 7 天（168 小时），以小时为时间单位。

@@ -51,6 +51,7 @@ uv run python -m defi_pool_simulator --replications 10 --output-dir results
 ```bash
 uv sync --group docs
 uv run --group docs python scripts/fill_week2_form.py
+uv run --group docs python scripts/fill_week3_form.py
 
 brew install --cask libreoffice   # 仅首次
 ```

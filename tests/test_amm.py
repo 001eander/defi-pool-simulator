@@ -63,13 +63,13 @@ def test_slippage_increases_with_order_size() -> None:
     assert len(set(slippages)) == len(slippages)
 
 
-def test_inventory_check_uses_input_token_balance() -> None:
+def test_input_amount_is_not_limited_by_input_reserve() -> None:
     pool = make_pool()
 
-    assert pool.can_fill(Direction.A_TO_B, 1_000_000.0)
-    assert not pool.can_fill(Direction.A_TO_B, 1_000_001.0)
-    assert pool.can_fill(Direction.B_TO_A, 2_000_000.0)
-    assert not pool.can_fill(Direction.B_TO_A, 2_000_001.0)
+    quote = pool.quote(Direction.A_TO_B, 5_000_000.0)
+
+    assert quote.amount_in > pool.reserve_a
+    assert 0.0 < quote.amount_out < pool.reserve_b
     assert pool.available(Token.A) == pytest.approx(1_000_000.0)
 
 

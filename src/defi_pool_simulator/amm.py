@@ -103,12 +103,6 @@ class LiquidityPool:
     def available(self, token: Token) -> float:
         return self.reserve_a if token is Token.A else self.reserve_b
 
-    def can_fill(self, direction: Direction, amount_in: float) -> bool:
-        """库存校验：双边储备均为正，且输入量不超过对应代币可用余额。"""
-        if self.reserve_a <= 0.0 or self.reserve_b <= 0.0:
-            return False
-        return amount_in <= self.available(direction.input_token)
-
     def quote(self, direction: Direction, amount_in: float) -> SwapQuote:
         """按 x·y=k 与手续费率计算成交结果，不改变池内状态。"""
         if amount_in <= 0.0:

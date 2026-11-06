@@ -20,13 +20,13 @@ class AggregateResult:
     summary: pd.DataFrame = field(repr=False, compare=False)
 
 
-def _scalar_metrics(run: SimulationResult) -> dict[str, float]:
+def scalar_metrics(run: SimulationResult) -> dict[str, float]:
     metrics: dict[str, float] = {
         "total_orders": float(run.total_orders),
         "filled_orders": float(run.filled_orders),
         "failed_orders": float(run.failed_orders),
         "failure_rate": run.failure_rate,
-        "failed_inventory": float(run.failed_inventory),
+        "failed_reserves": float(run.failed_reserves),
         "failed_slippage": float(run.failed_slippage),
         "total_volume_a": run.total_volume_a,
         "total_fee_b": run.total_fee_b,
@@ -43,19 +43,20 @@ def _scalar_metrics(run: SimulationResult) -> dict[str, float]:
         "final_impermanent_loss_pct": run.final_impermanent_loss_pct,
         "final_impermanent_loss_b": run.final_impermanent_loss_b,
         "final_lp_net_income_b": run.final_lp_net_income_b,
+        "avg_slippage_all": run.avg_slippage,
     }
     for code in run.orders_by_type:
         metrics[f"orders_{code}"] = float(run.orders_by_type[code])
         metrics[f"filled_{code}"] = float(run.filled_by_type[code])
         metrics[f"failed_{code}"] = float(
-            run.failed_inventory_by_type[code] + run.failed_slippage_by_type[code]
+            run.failed_reserves_by_type[code] + run.failed_slippage_by_type[code]
         )
         metrics[f"avg_slippage_{code}"] = run.avg_slippage_by_type[code]
     return metrics
 
 
 def summarize(runs: tuple[SimulationResult, ...]) -> pd.DataFrame:
-    frame = pd.DataFrame([_scalar_metrics(run) for run in runs])
+    frame = pd.DataFrame([scalar_metrics(run) for run in runs])
     count = frame.count()
     std = frame.std(ddof=1)
     summary = pd.DataFrame(
@@ -74,7 +75,7 @@ def summarize(runs: tuple[SimulationResult, ...]) -> pd.DataFrame:
 def run_replications(
     params: SimulationParameters,
     replications: int = 10,
-    seed: int = 20261023,
+    seed: int = 20261026,
 ) -> AggregateResult:
     """以连续种子运行多次独立重复仿真。"""
     if replications < 1:
@@ -87,9 +88,7 @@ def write_outputs(aggregate: AggregateResult, output_dir: str | Path) -> None:
     """把重复结果、小时快照与汇总统计写入 CSV。"""
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
-    runs_frame = pd.DataFrame(
-        [{"seed": run.seed, **_scalar_metrics(run)} for run in aggregate.runs]
-    )
+    runs_frame = pd.DataFrame([{"seed": run.seed, **scalar_metrics(run)} for run in aggregate.runs])
     runs_frame.to_csv(target / "replications.csv", index=False, encoding="utf-8-sig")
     aggregate.summary.to_csv(target / "summary.csv", encoding="utf-8-sig")
     snapshots = pd.concat(

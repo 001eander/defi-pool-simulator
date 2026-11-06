@@ -19,11 +19,11 @@ class SimulationResult:
     seed: int
     total_orders: int
     filled_orders: int
-    failed_inventory: int
+    failed_reserves: int
     failed_slippage: int
     orders_by_type: dict[str, int]
     filled_by_type: dict[str, int]
-    failed_inventory_by_type: dict[str, int]
+    failed_reserves_by_type: dict[str, int]
     failed_slippage_by_type: dict[str, int]
     avg_slippage_by_type: dict[str, float]
     total_volume_a: float
@@ -45,11 +45,29 @@ class SimulationResult:
 
     @property
     def failed_orders(self) -> int:
-        return self.failed_inventory + self.failed_slippage
+        return self.failed_reserves + self.failed_slippage
 
     @property
     def failure_rate(self) -> float:
         return self.failed_orders / self.total_orders if self.total_orders else 0.0
+
+    @property
+    def avg_slippage(self) -> float:
+        """按进入定价环节的订单数加权的平均滑点。"""
+        quoted_count = sum(
+            self.orders_by_type[code] - self.failed_reserves_by_type[code]
+            for code in self.orders_by_type
+        )
+        if not quoted_count:
+            return math.nan
+        return (
+            sum(
+                self.avg_slippage_by_type[code]
+                * (self.orders_by_type[code] - self.failed_reserves_by_type[code])
+                for code in self.orders_by_type
+            )
+            / quoted_count
+        )
 
 
 class MetricsRecorder:
@@ -58,11 +76,11 @@ class MetricsRecorder:
     def __init__(self) -> None:
         self.total_orders = 0
         self.filled_orders = 0
-        self.failed_inventory = 0
+        self.failed_reserves = 0
         self.failed_slippage = 0
         self.orders_by_type: Counter[str] = Counter()
         self.filled_by_type: Counter[str] = Counter()
-        self.failed_inventory_by_type: Counter[str] = Counter()
+        self.failed_reserves_by_type: Counter[str] = Counter()
         self.failed_slippage_by_type: Counter[str] = Counter()
         self.slippage_sum_by_type: defaultdict[str, float] = defaultdict(float)
         self.slippage_count_by_type: Counter[str] = Counter()
@@ -82,9 +100,9 @@ class MetricsRecorder:
         self.filled_by_type[trade_type.code] += 1
         self.total_volume_a += volume_a
 
-    def record_inventory_failure(self, trade_type: TradeType) -> None:
-        self.failed_inventory += 1
-        self.failed_inventory_by_type[trade_type.code] += 1
+    def record_reserve_failure(self, trade_type: TradeType) -> None:
+        self.failed_reserves += 1
+        self.failed_reserves_by_type[trade_type.code] += 1
 
     def record_slippage_failure(self, trade_type: TradeType) -> None:
         self.failed_slippage += 1
@@ -136,7 +154,7 @@ class MetricsRecorder:
                 "depth_a": pool.depth_a(external_price),
                 "total_orders": float(self.total_orders),
                 "filled_orders": float(self.filled_orders),
-                "failed_orders": float(self.failed_inventory + self.failed_slippage),
+                "failed_orders": float(self.failed_reserves + self.failed_slippage),
             }
         )
 
@@ -153,12 +171,12 @@ class MetricsRecorder:
             seed=seed,
             total_orders=self.total_orders,
             filled_orders=self.filled_orders,
-            failed_inventory=self.failed_inventory,
+            failed_reserves=self.failed_reserves,
             failed_slippage=self.failed_slippage,
             orders_by_type={code: self.orders_by_type[code] for code in coded_types},
             filled_by_type={code: self.filled_by_type[code] for code in coded_types},
-            failed_inventory_by_type={
-                code: self.failed_inventory_by_type[code] for code in coded_types
+            failed_reserves_by_type={
+                code: self.failed_reserves_by_type[code] for code in coded_types
             },
             failed_slippage_by_type={
                 code: self.failed_slippage_by_type[code] for code in coded_types

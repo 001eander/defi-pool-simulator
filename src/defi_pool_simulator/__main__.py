@@ -12,7 +12,7 @@ from .runner import key_means, run_replications, write_outputs
 def main() -> None:
     parser = argparse.ArgumentParser(description="DeFi 流动性池离散事件仿真")
     parser.add_argument("--replications", type=int, default=10, help="重复仿真次数")
-    parser.add_argument("--seed", type=int, default=20261023, help="基准随机种子")
+    parser.add_argument("--seed", type=int, default=20261026, help="基准随机种子")
     parser.add_argument("--output-dir", type=Path, default=Path("results"), help="结果输出目录")
     parser.add_argument("--fee-rate", type=float, default=None, help="覆盖手续费率，例如 0.005")
     parser.add_argument("--price-sigma", type=float, default=None, help="覆盖每小时价格波动率")

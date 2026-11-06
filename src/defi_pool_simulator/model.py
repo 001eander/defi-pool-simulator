@@ -43,7 +43,10 @@ class _TradeArrivals(sim.Component):
             if rng.random() < params.direction_a_to_b_probability
             else Direction.B_TO_A
         )
-        size_a = rng.uniform(trade_type.min_amount_a, trade_type.max_amount_a)
+        size_a = rng.randint(
+            int(trade_type.min_amount_a),
+            int(trade_type.max_amount_a),
+        )
         execute_trade(self.pool, self.recorder, trade_type, direction, size_a)
 
 
@@ -54,20 +57,16 @@ def execute_trade(
     direction: Direction,
     size_a: float,
 ) -> None:
-    """执行一笔交易：库存校验、定价、滑点判定与成交或放弃。"""
+    """执行一笔交易：储备可用性检查、定价、滑点判定与成交或放弃。"""
     recorder.record_order(trade_type)
     if pool.reserve_a <= 0.0 or pool.reserve_b <= 0.0:
-        recorder.record_inventory_failure(trade_type)
+        recorder.record_reserve_failure(trade_type)
         return
 
     # 案例以枚 A 定义交易规模；B→A 订单按池内即时价折算为等值 B 输入。
     amount_in = size_a if direction is Direction.A_TO_B else size_a * pool.spot_price
 
-    # 交易在事件循环中串行结算，服务时长为 0，无需显式 Resource 或 Queue。
-    if not pool.can_fill(direction, amount_in):
-        recorder.record_inventory_failure(trade_type)
-        return
-
+    # 输入代币注入池内，不受当前输入储备限制；输出量由恒定乘积公式约束。
     quote = pool.quote(direction, amount_in)
     recorder.record_slippage(trade_type, quote.slippage)
     if quote.slippage > trade_type.slippage_tolerance:

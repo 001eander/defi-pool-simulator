@@ -1,0 +1,34 @@
+flowchart TD
+    T1["_TradeArrivals<br/>EXPO(5 min)"] --> T2["sample_trade_type / Direction<br/>randint 抽取离散交易规模"]
+    T2 --> T3{"reserve_a > 0<br/>且 reserve_b > 0？"}
+    T3 -- 否 --> F1["record_reserve_failure<br/>储备不可用出口"]
+    T3 -- 是 --> T4["LiquidityPool.quote<br/>x·y=k，输入量×(1-fee)"]
+    T4 --> T5{"slippage ≤ tolerance？"}
+    T5 -- 否 --> F2["record_slippage_failure<br/>滑点超限出口"]
+    T5 -- 是 --> T6["LiquidityPool.settle<br/>输入储备增加、输出储备减少<br/>record_fill / 手续费累计"]
+
+    L1["_LpAddArrivals<br/>EXPO(2 h)"] --> L2["add_liquidity<br/>按比例注入 A/B、增发份额"]
+    L3["_LpRemoveArrivals<br/>EXPO(3 h)"] --> L4["remove_liquidity<br/>超额时部分执行并记录赎回缺口"]
+
+    M1["_MarketTicker<br/>每 1 h"] --> M2["外部参照价格随机游走<br/>record_snapshot"]
+
+    T4 -.读取储备.-> S[("LiquidityPool<br/>reserve_a / reserve_b<br/>total_shares / cumulative_fee_b")]
+    T6 -.更新.-> S
+    L2 -.更新.-> S
+    L4 -.更新.-> S
+    M2 -.读取.-> S
+    M2 --> O["MetricsRecorder<br/>小时快照与单次结果"]
+    T6 --> O
+    F1 --> O
+    F2 --> O
+    O --> R["run_replications<br/>replications.csv / snapshots.csv<br/>summary.csv"]
+
+    P["同刻优先级：外部价格 0 > LP 1 > 交易 2<br/>结算服务时长 0，不形成等待队列"] -.-> T1
+    P -.-> L1
+    P -.-> M1
+
+    style S fill:#fff3cd,stroke:#d4a017
+    style T3 fill:#ffe0e0,stroke:#c0392b
+    style T5 fill:#ffe0e0,stroke:#c0392b
+    style O fill:#e8f3ff,stroke:#2874a6
+    style R fill:#e8f3ff,stroke:#2874a6

@@ -30,15 +30,15 @@ def test_b_to_a_order_uses_a_equivalent_size() -> None:
     assert pool.reserve_b > 2_000_000.0
 
 
-def test_inventory_failure_leaves_pool_unchanged() -> None:
+def test_large_input_fails_only_by_slippage_and_leaves_pool_unchanged() -> None:
     pool = make_pool()
     recorder = MetricsRecorder()
     trade_type = TradeType("huge", "巨额", 1.0, 5_000_000.0, 5_000_000.0, 0.05)
 
     execute_trade(pool, recorder, trade_type, Direction.A_TO_B, 5_000_000.0)
 
-    assert recorder.failed_inventory == 1
-    assert recorder.failed_slippage == 0
+    assert recorder.failed_reserves == 0
+    assert recorder.failed_slippage == 1
     assert recorder.filled_orders == 0
     assert pool.reserve_a == 1_000_000.0
     assert pool.reserve_b == 2_000_000.0
@@ -51,7 +51,7 @@ def test_slippage_failure_leaves_pool_unchanged() -> None:
 
     execute_trade(pool, recorder, trade_type, Direction.A_TO_B, 500_000.0)
 
-    assert recorder.failed_inventory == 0
+    assert recorder.failed_reserves == 0
     assert recorder.failed_slippage == 1
     assert recorder.filled_orders == 0
     assert recorder.slippage_sum_by_type["large"] > 0.001
@@ -79,7 +79,7 @@ def test_every_order_has_exactly_one_outcome() -> None:
     assert result.filled_orders + result.failed_orders == result.total_orders
     assert sum(result.orders_by_type.values()) == result.total_orders
     assert sum(result.filled_by_type.values()) == result.filled_orders
-    assert sum(result.failed_inventory_by_type.values()) == result.failed_inventory
+    assert sum(result.failed_reserves_by_type.values()) == result.failed_reserves
     assert sum(result.failed_slippage_by_type.values()) == result.failed_slippage
 
 

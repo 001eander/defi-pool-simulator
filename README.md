@@ -15,23 +15,25 @@ uv run pytest    # 运行测试
 
 ## 仿真模型
 
-第2次课的概念模型已实现为 salabim 离散事件模型，时间单位为小时。同刻事件按「外部价格 > LP 操作 > 交易」排序；交易与 LP 操作服务时长为 0，不形成等待队列。
+第2次课的概念模型已实现为 salabim 离散事件模型，时间单位为小时。同刻事件按「外部价格 > LP 操作 > 交易」排序；交易与 LP 操作服务时长为 0，不形成等待队列。三类交易规模均按参数表使用离散均匀分布，默认基准随机种子为 `20261026`。
+
+交易输入代币注入池内，不受输入代币当前储备限制；恒定乘积公式保证输出量小于输出储备。非空池交易只检查双边储备均为正，池撤空后订单进入储备不可用出口。LP 撤出会减少池内储备，因此超额撤出仍按可用量部分执行并记录赎回缺口。
 
 ```bash
-uv run python -m defi_pool_simulator --replications 10 --output-dir results
+uv run python -m defi_pool_simulator --replications 10 --output-dir results/baseline
 ```
 
 可选参数：`--seed`、`--fee-rate`、`--price-sigma`、`--duration-hours`。
 
-| 输出文件                   | 内容                                    |
-| -------------------------- | --------------------------------------- |
-| `results/replications.csv` | 每次重复仿真的标量指标                  |
-| `results/snapshots.csv`    | 每小时储备、价格、手续费与无常损失快照  |
-| `results/summary.csv`      | 各指标的均值、标准差与 95% 置信区间半宽 |
+| 输出文件                            | 内容                                    |
+| ----------------------------------- | --------------------------------------- |
+| `results/baseline/replications.csv` | 每次重复仿真的标量指标                  |
+| `results/baseline/snapshots.csv`    | 每小时储备、价格、手续费与无常损失快照  |
+| `results/baseline/summary.csv`      | 各指标的均值、标准差与 95% 置信区间半宽 |
 
 指标口径：
 
-- 滑点为成交均价相对池内即时价的偏离比例，包含手续费。
+- 滑点为成交均价相对池内即时价的偏离比例，包含手续费；整体平均滑点按进入定价环节的订单数加权。
 - 累计手续费按成交前池内价格折算为 Token B。
 - 无常损失以初始外部价格为基准，按 `1 - 2√k / (1 + k)` 计算，`k` 为外部价格比；LP 净收益为累计手续费减无常损失。
 
@@ -42,7 +44,25 @@ uv run python -m defi_pool_simulator --replications 10 --output-dir results
 | `metrics.py`    | 交易结果累计、小时快照与单次仿真结果          |
 | `model.py`      | salabim 到达流、事件处理与同刻优先级          |
 | `runner.py`     | 多次重复、汇总统计与 CSV 输出                 |
-| `__main__.py`   | 命令行入口                                    |
+| `validation.py` | 极端值校验、单因素灵敏度与响应图              |
+| `__main__.py`   | 基准仿真命令行入口                            |
+
+## 极端值与参数灵敏度校验
+
+```bash
+uv run python -m defi_pool_simulator.validation --replications 30 --output-dir results/validation
+```
+
+校验覆盖趋近零交易、超大输入、滑点阈值、空池、零波动率、价格极值、超额撤出、订单守恒与随机种子复现。灵敏度实验分别调整手续费率（0、0.3%、0.5%）、外部价格波动率（0、2%、5%）和大额交易占比（10%、20%），所有方案共用 `20261026 + i` 种子组。
+
+| 输出文件                                         | 内容                                       |
+| ------------------------------------------------ | ------------------------------------------ |
+| `results/validation/extreme_values.csv`          | 极端值理论预期、实际结果与通过状态         |
+| `results/validation/sensitivity_runs.csv`        | 各方案逐次重复结果                         |
+| `results/validation/sensitivity_summary.csv`     | 均值、置信区间及相对同种子基准的配对差值   |
+| `results/validation/sensitivity_response.png`    | 三组因素的关键指标响应图                   |
+
+随机响应用于检查机制与初步参数灵敏度，不把单次单调变化作为正确性的必要条件，也不替代后续正式实验设计和现实有效性检验。
 
 ## 课程表单脚本
 
@@ -52,6 +72,7 @@ uv run python -m defi_pool_simulator --replications 10 --output-dir results
 uv sync --group docs
 uv run --group docs python scripts/fill_week2_form.py
 uv run --group docs python scripts/fill_week3_form.py
+uv run --group docs python scripts/fill_week4_form.py
 
 brew install --cask libreoffice   # 仅首次
 ```
